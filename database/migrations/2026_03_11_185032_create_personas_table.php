@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('personas', function (Blueprint $table) {
-            $table->id('idPersona'); // Tu llave primaria
+            $table->id('idPersona'); 
             $table->string('nombre');
             $table->string('apellidoP');
-            $table->string('apellidoM')->nullable(); // nullable permite dejarlo en blanco si alguien no tiene segundo apellido
+            $table->string('apellidoM')->nullable(); 
             $table->string('celular');
             $table->string('correoElectronico')->unique();
             $table->date('fechaRegistro');
             $table->boolean('estado')->default(1);
-            $table->timestamps(); // Crea las columnas created_at y updated_at que Laravel usa por defecto
+            $table->timestamps();
         });
     }
 

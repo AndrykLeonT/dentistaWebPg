@@ -16,7 +16,7 @@ class PersonaFactory extends Factory
             'apellidoP' => fake()->lastName(), // Inventa un apellido paterno
             'apellidoM' => fake()->lastName(), // Inventa un apellido materno
             'celular' => fake()->numerify('##########'), // Inventa un número de 10 dígitos
-            'correoElectronico' => fake()->unique()->safeEmail(), // Inventa un correo que no se repita
+            'correoElectronico' => fake()->unique()->safeEmail(), // Inventa un correo
             'fechaRegistro' => fake()->date(), // Inventa una fecha
             'estado' => 1,
         ];
