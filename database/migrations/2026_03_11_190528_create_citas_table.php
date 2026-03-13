@@ -20,7 +20,6 @@ return new class extends Migration
             $table->unsignedBigInteger('idServicio');
             $table->foreign('idServicio')->references('idServicio')->on('servicios');
             
-            // El motivo ahora es simplemente un texto
             $table->string('motivo'); 
             
             $table->date('fechaRegistro');
