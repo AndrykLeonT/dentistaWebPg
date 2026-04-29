@@ -1,0 +1,421 @@
+{
+  "info": {
+    "name": "Dentista API",
+    "description": "Colección completa de la API REST del sistema de gestión dental. Base URL: {{base_url}} (default: http://localhost:8000/api). Usa la variable {{token}} para autenticación Bearer.",
+    "_postman_id": "dentista-api-v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api", "type": "string" },
+    { "key": "token",    "value": "",                          "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  pm.collectionVariables.set('token', pm.response.json().token);",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/login", "host": ["{{base_url}}"], "path": ["login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usuario\": \"admin\",\n  \"contraseña\": \"password123\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/logout", "host": ["{{base_url}}"], "path": ["logout"] }
+          }
+        },
+        {
+          "name": "Me (usuario actual)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/me", "host": ["{{base_url}}"], "path": ["me"] }
+          }
+        },
+        {
+          "name": "Cambiar contraseña",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/change-password", "host": ["{{base_url}}"], "path": ["change-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"contraseñaActual\": \"password123\",\n  \"nuevaContraseña\": \"nueva_pass_456\",\n  \"nuevaContraseña_confirmation\": \"nueva_pass_456\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Pacientes",
+      "item": [
+        {
+          "name": "Listar pacientes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/personas", "host": ["{{base_url}}"], "path": ["personas"], "query": [{ "key": "search", "value": "García", "disabled": true }] }
+          }
+        },
+        {
+          "name": "Ver paciente",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/personas/1", "host": ["{{base_url}}"], "path": ["personas", "1"] }
+          }
+        },
+        {
+          "name": "Crear paciente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/personas", "host": ["{{base_url}}"], "path": ["personas"] },
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"María\",\n  \"apellidoP\": \"García\",\n  \"apellidoM\": \"López\",\n  \"celular\": \"6121234567\",\n  \"correoElectronico\": \"maria@ejemplo.com\"\n}" }
+          }
+        },
+        {
+          "name": "Editar paciente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/personas/1", "host": ["{{base_url}}"], "path": ["personas", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"celular\": \"6129876543\",\n  \"correoElectronico\": \"maria.nuevo@ejemplo.com\"\n}" }
+          }
+        },
+        {
+          "name": "Eliminar paciente (desactivar)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/personas/1", "host": ["{{base_url}}"], "path": ["personas", "1"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Citas",
+      "item": [
+        {
+          "name": "Listar citas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": ["{{base_url}}"], "path": ["citas"],
+              "query": [
+                { "key": "fecha",       "value": "2024-08-15", "disabled": true },
+                { "key": "paciente_id", "value": "5",          "disabled": true },
+                { "key": "servicio_id", "value": "2",          "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ver cita",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/citas/1", "host": ["{{base_url}}"], "path": ["citas", "1"] }
+          }
+        },
+        {
+          "name": "Crear cita",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/citas", "host": ["{{base_url}}"], "path": ["citas"] },
+            "body": { "mode": "raw", "raw": "{\n  \"idPersona\": 5,\n  \"idServicio\": 2,\n  \"fechaProgramada\": \"2024-08-15\",\n  \"hora\": \"10:30\",\n  \"motivo\": \"Revisión de bracket\"\n}" }
+          }
+        },
+        {
+          "name": "Editar cita",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/citas/1", "host": ["{{base_url}}"], "path": ["citas", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"hora\": \"11:00\",\n  \"motivo\": \"Revisión de bracket (reagendada)\"\n}" }
+          }
+        },
+        {
+          "name": "Eliminar cita",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/citas/1", "host": ["{{base_url}}"], "path": ["citas", "1"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Recetas",
+      "item": [
+        {
+          "name": "Listar recetas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/recetas", "host": ["{{base_url}}"], "path": ["recetas"] }
+          }
+        },
+        {
+          "name": "Ver receta",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/recetas/1", "host": ["{{base_url}}"], "path": ["recetas", "1"] }
+          }
+        },
+        {
+          "name": "Crear receta",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/recetas", "host": ["{{base_url}}"], "path": ["recetas"] },
+            "body": { "mode": "raw", "raw": "{\n  \"idCita\": 12,\n  \"indicaciones\": \"Tomar ibuprofeno 400mg cada 8 horas por 3 días. Evitar alimentos duros.\"\n}" }
+          }
+        },
+        {
+          "name": "Editar receta",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/recetas/1", "host": ["{{base_url}}"], "path": ["recetas", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"indicaciones\": \"Tomar ibuprofeno 400mg cada 8 horas por 5 días.\"\n}" }
+          }
+        },
+        {
+          "name": "Eliminar receta",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/recetas/1", "host": ["{{base_url}}"], "path": ["recetas", "1"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Servicios",
+      "item": [
+        {
+          "name": "Listar servicios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/servicios", "host": ["{{base_url}}"], "path": ["servicios"] }
+          }
+        },
+        {
+          "name": "Ver servicio",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/servicios/1", "host": ["{{base_url}}"], "path": ["servicios", "1"] }
+          }
+        },
+        {
+          "name": "Crear servicio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/servicios", "host": ["{{base_url}}"], "path": ["servicios"] },
+            "body": { "mode": "raw", "raw": "{\n  \"idClaseServicio\": 1,\n  \"nombre\": \"Limpieza dental\",\n  \"costo\": 450.00,\n  \"duracion\": \"00:45:00\"\n}" }
+          }
+        },
+        {
+          "name": "Editar servicio",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/servicios/1", "host": ["{{base_url}}"], "path": ["servicios", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"costo\": 500.00\n}" }
+          }
+        },
+        {
+          "name": "Eliminar servicio",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/servicios/1", "host": ["{{base_url}}"], "path": ["servicios", "1"] }
+          }
+        },
+        {
+          "name": "Listar clases de servicio",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/clases-servicio", "host": ["{{base_url}}"], "path": ["clases-servicio"] }
+          }
+        },
+        {
+          "name": "Crear clase de servicio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/clases-servicio", "host": ["{{base_url}}"], "path": ["clases-servicio"] },
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Preventivo\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Empleados",
+      "item": [
+        {
+          "name": "Listar empleados",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados", "host": ["{{base_url}}"], "path": ["empleados"] }
+          }
+        },
+        {
+          "name": "Ver empleado",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados/1", "host": ["{{base_url}}"], "path": ["empleados", "1"] }
+          }
+        },
+        {
+          "name": "Crear empleado (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados", "host": ["{{base_url}}"], "path": ["empleados"] },
+            "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Luis\",\n  \"apellidoP\": \"Martínez\",\n  \"apellidoM\": \"Soto\",\n  \"celular\": \"6127654321\",\n  \"correoElectronico\": \"luis@clinica.com\",\n  \"idTipoEmpleado\": 2,\n  \"usuario\": \"lmartinez\",\n  \"rfc\": \"MASL800101ABC\",\n  \"contraseña\": \"password_inicial\",\n  \"palabraClave\": \"palabra_secreta\"\n}" }
+          }
+        },
+        {
+          "name": "Editar empleado (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados/1", "host": ["{{base_url}}"], "path": ["empleados", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"correoElectronico\": \"luis.nuevo@clinica.com\"\n}" }
+          }
+        },
+        {
+          "name": "Eliminar empleado (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados/1", "host": ["{{base_url}}"], "path": ["empleados", "1"] }
+          }
+        },
+        {
+          "name": "Reset password empleado (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados/1/reset-password", "host": ["{{base_url}}"], "path": ["empleados", "1", "reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"nuevaContraseña\": \"nueva_temporal_123\",\n  \"nuevaContraseña_confirmation\": \"nueva_temporal_123\"\n}" }
+          }
+        },
+        {
+          "name": "Listar tipos de empleado",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tipos-empleado", "host": ["{{base_url}}"], "path": ["tipos-empleado"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Cortes de Caja",
+      "item": [
+        {
+          "name": "Listar cortes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cortes", "host": ["{{base_url}}"], "path": ["cortes"] }
+          }
+        },
+        {
+          "name": "Corte activo (abierto)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cortes/activo", "host": ["{{base_url}}"], "path": ["cortes", "activo"] }
+          }
+        },
+        {
+          "name": "Ver corte",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cortes/1", "host": ["{{base_url}}"], "path": ["cortes", "1"] }
+          }
+        },
+        {
+          "name": "Abrir corte",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cortes", "host": ["{{base_url}}"], "path": ["cortes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"fDeCaja\": 500.00\n}" }
+          }
+        },
+        {
+          "name": "Cerrar corte",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/cortes/1", "host": ["{{base_url}}"], "path": ["cortes", "1"] },
+            "body": { "mode": "raw", "raw": "{\n  \"fechaFin\": \"2024-08-15 20:00:00\"\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Pagos",
+      "item": [
+        {
+          "name": "Listar pagos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Ver pago",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pagos/1", "host": ["{{base_url}}"], "path": ["pagos", "1"] }
+          }
+        },
+        {
+          "name": "Registrar pago",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pagos", "host": ["{{base_url}}"], "path": ["pagos"] },
+            "body": { "mode": "raw", "raw": "{\n  \"idPersona\": 5,\n  \"total\": 500.00,\n  \"efectivo\": 200.00,\n  \"tarjeta\": 300.00\n}" }
+          }
+        }
+      ]
+    }
+
+  ]
+}

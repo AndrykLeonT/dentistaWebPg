@@ -12,9 +12,24 @@ class TipoEmpleadoFactory extends Factory
     public function definition(): array
     {
         return [
-            'nombre' => fake()->jobTitle(), // Inventa un nombre de puesto
-            'descripcion' => fake()->sentence(), // Inventa una oración aleatoria
-            'estado' => 1,
+            'nombre'      => fake()->jobTitle(),
+            'descripcion' => fake()->sentence(),
+            'estado'      => 1,
         ];
+    }
+
+    public function administrador(): static
+    {
+        return $this->state(['nombre' => 'Administrador']);
+    }
+
+    public function dentista(): static
+    {
+        return $this->state(['nombre' => 'Dentista']);
+    }
+
+    public function recepcionista(): static
+    {
+        return $this->state(['nombre' => 'Recepcionista']);
     }
 }

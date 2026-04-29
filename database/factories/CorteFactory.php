@@ -13,11 +13,21 @@ class CorteFactory extends Factory
     {
         return [
             'fechaInicio' => fake()->dateTimeThisMonth(),
-            'fechaFin' => fake()->dateTimeThisMonth(),
-            'fDeCaja' => fake()->randomFloat(2, 500, 1000), // Fondo de caja inicial
-            'tEfectivo' => fake()->randomFloat(2, 1000, 10000), // Total efectivo
-            'tTarjeta' => fake()->randomFloat(2, 1000, 10000), // Total tarjeta
-            'correcto' => fake()->boolean(90), // 90% de probabilidad de que el corte sea correcto
+            'fechaFin'    => fake()->dateTimeThisMonth(),
+            'fDeCaja'     => fake()->randomFloat(2, 500, 1000),
+            'tEfectivo'   => fake()->randomFloat(2, 1000, 10000),
+            'tTarjeta'    => fake()->randomFloat(2, 1000, 10000),
+            'correcto'    => fake()->boolean(90),
+            'estado'      => 1,
         ];
+    }
+
+    public function abierto(): static
+    {
+        return $this->state([
+            'fechaFin'  => null,
+            'tEfectivo' => 0,
+            'tTarjeta'  => 0,
+        ]);
     }
 }
