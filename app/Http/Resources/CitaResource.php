@@ -24,7 +24,14 @@ class CitaResource extends JsonResource
                 'id'     => $this->servicio->idServicio,
                 'nombre' => $this->servicio->nombre,
                 'costo'  => $this->servicio->costo,
+                'duracion' => $this->servicio->duracion,
             ]),
+            'dentista'        => $this->whenLoaded('empleado', fn () => $this->empleado ? [
+                'id'             => $this->empleado->idEmpleado,
+                'nombreCompleto' => $this->empleado->persona
+                    ? trim("{$this->empleado->persona->nombre} {$this->empleado->persona->apellidoP} {$this->empleado->persona->apellidoM}")
+                    : $this->empleado->usuario,
+            ] : null),
             'receta'          => $this->whenLoaded('receta', fn () => new RecetaResource($this->receta)),
         ];
     }

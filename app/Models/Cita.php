@@ -16,6 +16,7 @@ class Cita extends Model
     protected $fillable = [
         'idPersona',
         'idServicio',
+        'idEmpleado',
         'fechaRegistro',
         'fechaProgramada',
         'hora',
@@ -43,6 +44,11 @@ class Cita extends Model
     public function servicio()
     {
         return $this->belongsTo(Servicio::class, 'idServicio', 'idServicio');
+    }
+
+    public function empleado()
+    {
+        return $this->belongsTo(Empleado::class, 'idEmpleado', 'idEmpleado');
     }
 
     public function receta()

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Cita;
+use App\Models\Empleado;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCitaRequest extends FormRequest
@@ -17,6 +18,7 @@ class StoreCitaRequest extends FormRequest
         return [
             'idPersona'       => 'required|integer|exists:personas,idPersona',
             'idServicio'      => 'required|integer|exists:servicios,idServicio',
+            'idEmpleado'      => 'required|integer|exists:empleados,idEmpleado',
             'fechaProgramada' => 'required|date',
             'hora'            => 'required|date_format:H:i',
             'duracion'        => 'nullable|date_format:H:i:s',
@@ -27,15 +29,23 @@ class StoreCitaRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if ($this->filled(['fechaProgramada', 'hora', 'idServicio'])) {
+            if ($this->filled('idEmpleado')) {
+                $empleado = Empleado::with('tipoEmpleado')->find($this->idEmpleado);
+
+                if (! $empleado || ! $empleado->estado || strtolower($empleado->tipoEmpleado?->nombre ?? '') !== 'dentista') {
+                    $validator->errors()->add('idEmpleado', 'El dentista seleccionado no es valido.');
+                }
+            }
+
+            if ($this->filled(['fechaProgramada', 'hora', 'idEmpleado'])) {
                 $colision = Cita::where('fechaProgramada', $this->fechaProgramada)
                     ->where('hora', $this->hora)
-                    ->where('idServicio', $this->idServicio)
+                    ->where('idEmpleado', $this->idEmpleado)
                     ->where('estado', 1)
                     ->exists();
 
                 if ($colision) {
-                    $validator->errors()->add('hora', 'Ya existe una cita para ese servicio en esa fecha y hora.');
+                    $validator->errors()->add('hora', 'Ya existe una cita para ese dentista en esa fecha y hora.');
                 }
             }
         });
@@ -48,6 +58,8 @@ class StoreCitaRequest extends FormRequest
             'idPersona.exists'         => 'El paciente no existe.',
             'idServicio.required'      => 'El servicio es obligatorio.',
             'idServicio.exists'        => 'El servicio no existe.',
+            'idEmpleado.required'      => 'El dentista es obligatorio.',
+            'idEmpleado.exists'        => 'El dentista no existe.',
             'fechaProgramada.required' => 'La fecha de la cita es obligatoria.',
             'fechaProgramada.date'     => 'La fecha no tiene un formato válido.',
             'hora.required'            => 'La hora es obligatoria.',

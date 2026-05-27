@@ -12,7 +12,7 @@ class CitaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Cita::activos()->with('persona', 'servicio');
+        $query = Cita::activos()->with('persona', 'servicio', 'empleado.persona');
 
         if ($fecha = $request->query('fecha')) {
             $query->whereDate('fechaProgramada', $fecha);
@@ -31,24 +31,36 @@ class CitaController extends Controller
 
     public function store(StoreCitaRequest $request)
     {
-        $cita = Cita::create($request->validated() + [
+        $data = $request->validated();
+
+        if (($data['motivo'] ?? null) === null) {
+            $data['motivo'] = '';
+        }
+
+        $cita = Cita::create($data + [
             'fechaRegistro' => now(),
             'estado'        => true,
         ]);
 
-        return new CitaResource($cita->load('persona', 'servicio'));
+        return new CitaResource($cita->load('persona', 'servicio', 'empleado.persona'));
     }
 
     public function show(Cita $cita)
     {
-        return new CitaResource($cita->load('persona', 'servicio', 'receta'));
+        return new CitaResource($cita->load('persona', 'servicio', 'empleado.persona', 'receta'));
     }
 
     public function update(UpdateCitaRequest $request, Cita $cita)
     {
-        $cita->update($request->validated());
+        $data = $request->validated();
 
-        return new CitaResource($cita->load('persona', 'servicio'));
+        if (array_key_exists('motivo', $data) && $data['motivo'] === null) {
+            $data['motivo'] = '';
+        }
+
+        $cita->update($data);
+
+        return new CitaResource($cita->load('persona', 'servicio', 'empleado.persona'));
     }
 
     public function destroy(Cita $cita)
