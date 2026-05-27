@@ -14,7 +14,10 @@ class ServicioResource extends JsonResource
             'nombre'       => $this->nombre,
             'descripcion'  => $this->descripcion,
             'costo'        => $this->costo,
+            'precio'       => (float) $this->costo,
             'duracion'     => $this->duracion,
+            'estado'       => (bool) $this->estado,
+            'activo'       => (bool) $this->estado,
             'claseServicio' => $this->whenLoaded('claseServicio', fn () => new ClaseServicioResource($this->claseServicio)),
         ];
     }

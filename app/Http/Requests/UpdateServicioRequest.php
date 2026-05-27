@@ -19,6 +19,7 @@ class UpdateServicioRequest extends FormRequest
             'descripcion'     => 'nullable|string',
             'costo'           => 'sometimes|numeric|min:0',
             'duracion'        => 'sometimes|date_format:H:i:s',
+            'estado'          => 'sometimes|boolean',
         ];
     }
 
