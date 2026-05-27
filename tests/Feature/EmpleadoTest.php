@@ -66,6 +66,7 @@ class EmpleadoTest extends TestCase
     public function test_admin_puede_resetear_contraseña(): void
     {
         $empleado = $this->crearDentista();
+        $empleado->createToken('sesion-previa');
 
         $this->actingAs($this->crearAdmin(), 'sanctum')
             ->postJson("/api/empleados/{$empleado->idEmpleado}/reset-password", [
@@ -76,6 +77,7 @@ class EmpleadoTest extends TestCase
         $empleado->refresh();
         $this->assertTrue($empleado->cambioContraseña);
         $this->assertTrue(Hash::check('nueva_temp_123', $empleado->contraseña));
+        $this->assertCount(0, $empleado->tokens()->get());
     }
 
     public function test_reset_password_activa_flag_cambio_contraseña(): void
@@ -116,11 +118,14 @@ class EmpleadoTest extends TestCase
     public function test_destroy_desactiva_empleado(): void
     {
         $empleado = $this->crearDentista();
+        $empleado->createToken('sesion-uno');
+        $empleado->createToken('sesion-dos');
 
         $this->actingAs($this->crearAdmin(), 'sanctum')
             ->deleteJson("/api/empleados/{$empleado->idEmpleado}")
             ->assertNoContent();
 
         $this->assertFalse((bool) $empleado->fresh()->estado);
+        $this->assertCount(0, $empleado->tokens()->get());
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateEmpleadoRequest;
 use App\Http\Resources\EmpleadoResource;
 use App\Models\Empleado;
 use App\Models\Persona;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class EmpleadoController extends Controller
@@ -71,17 +72,24 @@ class EmpleadoController extends Controller
 
     public function resetPassword(ResetPasswordEmpleadoRequest $request, Empleado $empleado)
     {
-        $empleado->update([
-            'contraseña'       => Hash::make($request->nuevaContraseña),
-            'cambioContraseña' => true,
-        ]);
+        DB::transaction(function () use ($request, $empleado) {
+            $empleado->update([
+                'contraseña'       => Hash::make($request->nuevaContraseña),
+                'cambioContraseña' => true,
+            ]);
+
+            $empleado->tokens()->delete();
+        });
 
         return response()->json(['message' => 'Contraseña restablecida. El empleado deberá cambiarla en su próximo inicio de sesión.']);
     }
 
     public function destroy(Empleado $empleado)
     {
-        $empleado->update(['estado' => false]);
+        DB::transaction(function () use ($empleado) {
+            $empleado->update(['estado' => false]);
+            $empleado->tokens()->delete();
+        });
 
         return response()->json(null, 204);
     }

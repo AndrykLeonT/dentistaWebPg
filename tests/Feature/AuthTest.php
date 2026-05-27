@@ -12,6 +12,11 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase, CreatesEmployees;
 
+    private function olvidarAutenticacionResuelta(): void
+    {
+        $this->app['auth']->forgetGuards();
+    }
+
     public function test_login_con_credenciales_validas_retorna_token(): void
     {
         $empleado = $this->crearAdmin();
@@ -47,6 +52,73 @@ class AuthTest extends TestCase
         ])->assertUnauthorized();
     }
 
+    public function test_token_previo_de_empleado_desactivado_ya_no_permite_acceso(): void
+    {
+        $empleado = $this->crearRecepcionista();
+        $token = $empleado->createToken('sesion-empleado')->plainTextToken;
+        $adminToken = $this->crearAdmin()->createToken('sesion-admin')->plainTextToken;
+
+        $this->withToken($adminToken)
+            ->deleteJson("/api/empleados/{$empleado->idEmpleado}")
+            ->assertNoContent();
+
+        $this->olvidarAutenticacionResuelta();
+
+        $this->withToken($token)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_empleado_desactivado_no_puede_ejecutar_operaciones_de_su_rol(): void
+    {
+        $empleado = $this->crearRecepcionista();
+        $token = $empleado->createToken('sesion-empleado')->plainTextToken;
+        $adminToken = $this->crearAdmin()->createToken('sesion-admin')->plainTextToken;
+
+        $this->withToken($adminToken)
+            ->deleteJson("/api/empleados/{$empleado->idEmpleado}")
+            ->assertNoContent();
+
+        $this->olvidarAutenticacionResuelta();
+
+        $this->withToken($token)
+            ->postJson('/api/personas', [
+                'nombre'    => 'Paciente',
+                'apellidoP' => 'Bloqueado',
+                'celular'   => '6120000000',
+            ])->assertUnauthorized();
+    }
+
+    public function test_middleware_revoca_token_si_empleado_esta_inactivo(): void
+    {
+        $empleado = $this->crearRecepcionista();
+        $token = $empleado->createToken('sesion-activa')->plainTextToken;
+
+        $empleado->update(['estado' => false]);
+
+        $this->withToken($token)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
+
+        $this->assertCount(0, $empleado->tokens()->get());
+    }
+
+    public function test_token_expirado_no_permite_acceso(): void
+    {
+        $empleado = $this->crearAdmin();
+        $token = $empleado->createToken('sesion-expirada')->plainTextToken;
+
+        $empleado->tokens()->first()->forceFill([
+            'created_at' => now()->subMinutes(config('sanctum.expiration') + 1),
+        ])->save();
+
+        $this->assertNotNull(config('sanctum.expiration'));
+
+        $this->withToken($token)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
+    }
+
     public function test_login_con_cambio_de_contraseña_pendiente_retorna_flag(): void
     {
         $empleado = $this->crearAdmin();
@@ -70,6 +142,12 @@ class AuthTest extends TestCase
             ->postJson('/api/logout')
             ->assertOk()
             ->assertJsonPath('message', 'Sesión cerrada.');
+
+        $this->olvidarAutenticacionResuelta();
+
+        $this->withToken($token)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
     }
 
     public function test_me_retorna_datos_del_empleado_autenticado(): void
