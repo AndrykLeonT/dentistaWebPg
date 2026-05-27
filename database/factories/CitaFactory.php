@@ -14,6 +14,9 @@ class CitaFactory extends Factory
         return [
             'idPersona' => \App\Models\Persona::factory(),
             'idServicio' => \App\Models\Servicio::factory(),
+            'idEmpleado' => \App\Models\Empleado::factory()->state([
+                'idTipoEmpleado' => \App\Models\TipoEmpleado::factory()->dentista(),
+            ]),
             'motivo' => fake()->sentence(),
             'fechaRegistro' => fake()->date(),
             'fechaProgramada' => fake()->dateTimeBetween('now', '+1 month')->format('Y-m-d'), // Citas a futuro

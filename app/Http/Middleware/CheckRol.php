@@ -10,6 +10,7 @@ class CheckRol
 {
     private const MAP = [
         'administrador' => 'admin',
+        'admin'         => 'admin',
         'dentista'      => 'dentista',
         'recepcionista' => 'recepcionista',
     ];
@@ -25,7 +26,7 @@ class CheckRol
         $empleado->loadMissing('tipoEmpleado');
 
         $nombre    = $empleado->tipoEmpleado?->nombre ?? '';
-        $rolActual = self::MAP[strtolower($nombre)] ?? null;
+        $rolActual = self::MAP[strtolower(trim($nombre))] ?? null;
 
         if (! $rolActual || ! in_array($rolActual, $roles)) {
             return response()->json(['message' => 'No tienes permiso para esta acción.'], 403);

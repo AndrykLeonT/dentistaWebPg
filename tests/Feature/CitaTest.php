@@ -17,13 +17,15 @@ class CitaTest extends TestCase
     {
         $persona  = Persona::factory()->create();
         $servicio = Servicio::factory()->create();
+        $dentista = $this->crearDentista();
 
         return array_merge([
             'idPersona'       => $persona->idPersona,
             'idServicio'      => $servicio->idServicio,
+            'idEmpleado'      => $dentista->idEmpleado,
             'fechaProgramada' => '2027-01-15',
             'hora'            => '10:00',
-            'motivo'          => 'Revisión general',
+            'motivo'          => 'Revision general',
         ], $overrides);
     }
 
@@ -34,6 +36,37 @@ class CitaTest extends TestCase
             ->assertCreated();
     }
 
+    public function test_crear_cita_requiere_dentista(): void
+    {
+        $payload = $this->payload();
+        unset($payload['idEmpleado']);
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->postJson('/api/citas', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['idEmpleado']);
+    }
+
+    public function test_crear_cita_permite_motivo_vacio(): void
+    {
+        $payload = $this->payload(['motivo' => null]);
+
+        $this->actingAs($this->crearRecepcionista(), 'sanctum')
+            ->postJson('/api/citas', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.motivo', '');
+    }
+
+    public function test_crear_cita_rechaza_empleado_que_no_es_dentista(): void
+    {
+        $recepcionista = $this->crearRecepcionista();
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->postJson('/api/citas', $this->payload(['idEmpleado' => $recepcionista->idEmpleado]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['idEmpleado']);
+    }
+
     public function test_dentista_no_puede_crear_cita(): void
     {
         $this->actingAs($this->crearDentista(), 'sanctum')
@@ -41,20 +74,32 @@ class CitaTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_colision_de_horario_retorna_422(): void
+    public function test_colision_de_horario_por_dentista_retorna_422(): void
     {
         $payload = $this->payload();
 
-        // Primera cita — debe crearse bien
         $this->actingAs($this->crearAdmin(), 'sanctum')
             ->postJson('/api/citas', $payload)
             ->assertCreated();
 
-        // Segunda cita con mismo servicio+fecha+hora — debe fallar
         $this->actingAs($this->crearAdmin(), 'sanctum')
             ->postJson('/api/citas', $payload)
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['hora']);
+    }
+
+    public function test_index_retorna_dentista_anidado(): void
+    {
+        $payload = $this->payload();
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->postJson('/api/citas', $payload)
+            ->assertCreated();
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->getJson('/api/citas?fecha=2027-01-15')
+            ->assertOk()
+            ->assertJsonPath('data.0.dentista.id', $payload['idEmpleado']);
     }
 
     public function test_filtro_por_fecha(): void
