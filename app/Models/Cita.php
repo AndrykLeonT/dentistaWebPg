@@ -55,4 +55,9 @@ class Cita extends Model
     {
         return $this->hasOne(Receta::class, 'idCita', 'idCita');
     }
+
+    public function consumoInventario()
+    {
+        return $this->hasOne(ConsumoInventarioCita::class, 'idCita', 'idCita');
+    }
 }

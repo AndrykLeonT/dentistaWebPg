@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RecoverPasswordKeywordRequest;
 use App\Http\Resources\EmpleadoResource;
 use App\Models\Empleado;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -65,5 +67,66 @@ class AuthController extends Controller
         ]);
 
         return response()->json(['message' => 'Contraseña actualizada correctamente.']);
+    }
+
+    public function recoverPasswordKeyword(RecoverPasswordKeywordRequest $request)
+    {
+        $empleado = Empleado::where('usuario', $request->usuario)
+            ->where('estado', true)
+            ->first();
+
+        if (! $empleado) {
+            return response()->json(['message' => 'Empleado no encontrado.'], 404);
+        }
+
+        $rehashPalabraClave = false;
+
+        if (! $this->palabraClaveValida($request->palabraClave, $empleado->palabraClave, $rehashPalabraClave)) {
+            return response()->json(['message' => 'La palabra clave es incorrecta.'], 401);
+        }
+
+        DB::transaction(function () use ($empleado, $request, $rehashPalabraClave) {
+            $data = [
+                'contraseña' => Hash::make($request->new_password),
+                'cambioContraseña' => false,
+            ];
+
+            if ($rehashPalabraClave) {
+                $data['palabraClave'] = Hash::make($request->palabraClave);
+            }
+
+            $empleado->update($data);
+            $empleado->tokens()->delete();
+        });
+
+        return response()->json(['message' => 'Contraseña actualizada correctamente.']);
+    }
+
+    private function palabraClaveValida(string $valorPlano, ?string $valorAlmacenado, bool &$rehash): bool
+    {
+        if (! $valorAlmacenado) {
+            return false;
+        }
+
+        if ($this->esHashPassword($valorAlmacenado)) {
+            if (Hash::check($valorPlano, $valorAlmacenado)) {
+                $rehash = Hash::needsRehash($valorAlmacenado);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (hash_equals($valorAlmacenado, $valorPlano)) {
+            $rehash = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    private function esHashPassword(string $valor): bool
+    {
+        return password_get_info($valor)['algoName'] !== 'unknown';
     }
 }

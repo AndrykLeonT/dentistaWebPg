@@ -41,4 +41,9 @@ class Servicio extends Model
     {
         return $this->hasMany(Cita::class, 'idServicio', 'idServicio');
     }
+
+    public function consumosServicio()
+    {
+        return $this->hasMany(ConsumoServicio::class, 'idServicio', 'idServicio');
+    }
 }

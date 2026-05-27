@@ -53,4 +53,9 @@ class Pago extends Model
     {
         return $this->belongsTo(Corte::class, 'idCorte', 'idCorte');
     }
+
+    public function comprobante()
+    {
+        return $this->hasOne(Comprobante::class, 'idPago', 'idPago');
+    }
 }
