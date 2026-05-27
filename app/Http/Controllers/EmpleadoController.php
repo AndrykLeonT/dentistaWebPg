@@ -15,8 +15,14 @@ class EmpleadoController extends Controller
 {
     public function index()
     {
+        $query = Empleado::with('persona', 'tipoEmpleado');
+
+        if (! $this->esAdmin(request()->user())) {
+            $query->activos();
+        }
+
         return EmpleadoResource::collection(
-            Empleado::activos()->with('persona', 'tipoEmpleado')->get()
+            $query->latest()->get()
         );
     }
 
@@ -24,26 +30,28 @@ class EmpleadoController extends Controller
     {
         $validated = $request->validated();
 
-        $persona = Persona::create([
-            'nombre'            => $validated['nombre'],
-            'apellidoP'         => $validated['apellidoP'],
-            'apellidoM'         => $validated['apellidoM'] ?? null,
-            'celular'           => $validated['celular'],
-            'correoElectronico' => $validated['correoElectronico'] ?? null,
-            'fechaRegistro'     => now()->toDateString(),
-            'estado'            => true,
-        ]);
+        $empleado = DB::transaction(function () use ($validated) {
+            $persona = Persona::create([
+                'nombre'            => $validated['nombre'],
+                'apellidoP'         => $validated['apellidoP'],
+                'apellidoM'         => $validated['apellidoM'] ?? null,
+                'celular'           => $validated['celular'],
+                'correoElectronico' => $validated['correoElectronico'] ?? null,
+                'fechaRegistro'     => now()->toDateString(),
+                'estado'            => true,
+            ]);
 
-        $empleado = Empleado::create([
-            'idPersona'        => $persona->idPersona,
-            'idTipoEmpleado'   => $validated['idTipoEmpleado'],
-            'usuario'          => $validated['usuario'],
-            'rfc'              => $validated['rfc'] ?? null,
-            'contraseña'       => Hash::make($validated['contraseña']),
-            'palabraClave'     => Hash::make($validated['palabraClave']),
-            'cambioContraseña' => false,
-            'estado'           => true,
-        ]);
+            return Empleado::create([
+                'idPersona'        => $persona->idPersona,
+                'idTipoEmpleado'   => $validated['idTipoEmpleado'],
+                'usuario'          => $validated['usuario'],
+                'rfc'              => $validated['rfc'] ?? null,
+                'contraseña'       => Hash::make($validated['contraseña']),
+                'palabraClave'     => Hash::make($validated['palabraClave']),
+                'cambioContraseña' => false,
+                'estado'           => true,
+            ]);
+        });
 
         return new EmpleadoResource($empleado->load('persona', 'tipoEmpleado'));
     }
@@ -56,16 +64,53 @@ class EmpleadoController extends Controller
     public function update(UpdateEmpleadoRequest $request, Empleado $empleado)
     {
         $data = $request->validated();
+        $usuarioActual = $request->user();
 
-        if (isset($data['contraseña'])) {
-            $data['contraseña'] = Hash::make($data['contraseña']);
+        if ($usuarioActual?->idEmpleado === $empleado->idEmpleado) {
+            if (array_key_exists('estado', $data) && ! $data['estado']) {
+                return response()->json(['message' => 'No puedes desactivar tu propio usuario.'], 422);
+            }
+
+            if (array_key_exists('idTipoEmpleado', $data) && (int) $data['idTipoEmpleado'] !== (int) $empleado->idTipoEmpleado) {
+                return response()->json(['message' => 'No puedes cambiar tu propio rol.'], 422);
+            }
         }
 
-        if (isset($data['palabraClave'])) {
-            $data['palabraClave'] = Hash::make($data['palabraClave']);
+        if ($this->esUltimoAdminActivo($empleado, $data)) {
+            return response()->json(['message' => 'Debe existir al menos un administrador activo.'], 422);
         }
 
-        $empleado->update($data);
+        $datosPersona = array_intersect_key($data, array_flip([
+            'nombre',
+            'apellidoP',
+            'apellidoM',
+            'celular',
+            'correoElectronico',
+        ]));
+
+        $datosEmpleado = array_diff_key($data, $datosPersona);
+
+        if (isset($datosEmpleado['contraseña'])) {
+            $datosEmpleado['contraseña'] = Hash::make($datosEmpleado['contraseña']);
+        }
+
+        if (isset($datosEmpleado['palabraClave'])) {
+            $datosEmpleado['palabraClave'] = Hash::make($datosEmpleado['palabraClave']);
+        }
+
+        DB::transaction(function () use ($empleado, $datosPersona, $datosEmpleado) {
+            if ($datosPersona) {
+                $empleado->persona()->update($datosPersona);
+            }
+
+            if ($datosEmpleado) {
+                $empleado->update($datosEmpleado);
+
+                if (array_key_exists('estado', $datosEmpleado) && ! $datosEmpleado['estado']) {
+                    $empleado->tokens()->delete();
+                }
+            }
+        });
 
         return new EmpleadoResource($empleado->load('persona', 'tipoEmpleado'));
     }
@@ -86,11 +131,48 @@ class EmpleadoController extends Controller
 
     public function destroy(Empleado $empleado)
     {
+        if (request()->user()?->idEmpleado === $empleado->idEmpleado) {
+            return response()->json(['message' => 'No puedes desactivar tu propio usuario.'], 422);
+        }
+
+        if ($this->esUltimoAdminActivo($empleado, ['estado' => false])) {
+            return response()->json(['message' => 'Debe existir al menos un administrador activo.'], 422);
+        }
+
         DB::transaction(function () use ($empleado) {
             $empleado->update(['estado' => false]);
             $empleado->tokens()->delete();
         });
 
         return response()->json(null, 204);
+    }
+
+    private function esAdmin(?Empleado $empleado): bool
+    {
+        if (! $empleado) {
+            return false;
+        }
+
+        $empleado->loadMissing('tipoEmpleado');
+
+        return strtolower($empleado->tipoEmpleado?->nombre ?? '') === 'administrador';
+    }
+
+    private function esUltimoAdminActivo(Empleado $empleado, array $data): bool
+    {
+        $empleado->loadMissing('tipoEmpleado');
+
+        $esAdmin = $this->esAdmin($empleado);
+        $seDesactiva = array_key_exists('estado', $data) && ! $data['estado'];
+        $cambiaRol = array_key_exists('idTipoEmpleado', $data) && (int) $data['idTipoEmpleado'] !== (int) $empleado->idTipoEmpleado;
+
+        if (! $esAdmin || (! $seDesactiva && ! $cambiaRol)) {
+            return false;
+        }
+
+        return Empleado::where('estado', true)
+            ->whereHas('tipoEmpleado', fn ($query) => $query->where('nombre', 'Administrador'))
+            ->where('idEmpleado', '!=', $empleado->idEmpleado)
+            ->doesntExist();
     }
 }
