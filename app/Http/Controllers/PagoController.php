@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePagoRequest;
 use App\Http\Requests\UpdatePagoRequest;
 use App\Http\Resources\PagoResource;
-use App\Models\Corte;
 use App\Models\Pago;
+use App\Services\CajaService;
 
 class PagoController extends Controller
 {
@@ -17,23 +17,15 @@ class PagoController extends Controller
         );
     }
 
-    public function store(StorePagoRequest $request)
+    public function store(StorePagoRequest $request, CajaService $caja)
     {
-        $corteAbierto = Corte::whereNull('fechaFin')->where('estado', 1)->first();
+        $pago = $caja->registrarPago($request->validated(), $request->user());
 
-        if (! $corteAbierto) {
+        if (! $pago) {
             return response()->json([
                 'message' => 'No hay un corte de caja abierto. Abre un corte antes de registrar pagos.',
             ], 422);
         }
-
-        $pago = Pago::create($request->validated() + [
-            'idEmpleado'    => $request->user()->idEmpleado,
-            'idCorte'       => $corteAbierto->idCorte,
-            'fechaRegistro' => now(),
-            'pagado'        => true,
-            'estado'        => true,
-        ]);
 
         return new PagoResource($pago->load('persona', 'empleado.persona', 'corte'));
     }
@@ -43,16 +35,16 @@ class PagoController extends Controller
         return new PagoResource($pago->load('persona', 'empleado.persona', 'corte'));
     }
 
-    public function update(UpdatePagoRequest $request, Pago $pago)
+    public function update(UpdatePagoRequest $request, Pago $pago, CajaService $caja)
     {
-        $pago->update($request->validated());
+        $pago = $caja->actualizarPago($pago, $request->validated());
 
         return new PagoResource($pago->load('persona', 'empleado.persona', 'corte'));
     }
 
-    public function destroy(Pago $pago)
+    public function destroy(Pago $pago, CajaService $caja)
     {
-        $pago->update(['estado' => false]);
+        $caja->desactivarPago($pago);
 
         return response()->json(null, 204);
     }

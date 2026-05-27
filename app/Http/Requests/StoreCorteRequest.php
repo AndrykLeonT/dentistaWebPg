@@ -15,6 +15,11 @@ class StoreCorteRequest extends FormRequest
     {
         return [
             'fDeCaja' => 'required|numeric|min:0',
+            'fechaInicio' => 'prohibited',
+            'fechaFin' => 'prohibited',
+            'tEfectivo' => 'prohibited',
+            'tTarjeta' => 'prohibited',
+            'estado' => 'prohibited',
         ];
     }
 

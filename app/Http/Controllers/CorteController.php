@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCorteRequest;
 use App\Http\Requests\UpdateCorteRequest;
 use App\Http\Resources\CorteResource;
 use App\Models\Corte;
+use App\Services\CajaService;
 
 class CorteController extends Controller
 {
@@ -25,22 +26,15 @@ class CorteController extends Controller
         return new CorteResource($corte->load('pagos.persona'));
     }
 
-    public function store(StoreCorteRequest $request)
+    public function store(StoreCorteRequest $request, CajaService $caja)
     {
-        $hayAbierto = Corte::whereNull('fechaFin')->where('estado', 1)->exists();
+        $corte = $caja->abrirCorte($request->validated());
 
-        if ($hayAbierto) {
+        if (! $corte) {
             return response()->json([
                 'message' => 'Ya existe un corte de caja abierto. Ciérralo antes de abrir uno nuevo.',
             ], 422);
         }
-
-        $corte = Corte::create($request->validated() + [
-            'fechaInicio' => now(),
-            'tEfectivo'   => 0,
-            'tTarjeta'    => 0,
-            'estado'      => true,
-        ]);
 
         return new CorteResource($corte);
     }
@@ -50,29 +44,16 @@ class CorteController extends Controller
         return new CorteResource($corte->load('pagos.persona'));
     }
 
-    public function update(UpdateCorteRequest $request, Corte $corte)
+    public function update(UpdateCorteRequest $request, Corte $corte, CajaService $caja)
     {
-        $data = $request->validated();
-
-        // Al cerrar el corte: calcular totales sumando los pagos activos del período
-        if (isset($data['fechaFin']) && $corte->fechaFin === null) {
-            $totales = $corte->pagos()
-                ->where('estado', 1)
-                ->selectRaw('COALESCE(SUM(efectivo), 0) as totalEfectivo, COALESCE(SUM(tarjeta), 0) as totalTarjeta')
-                ->first();
-
-            $data['tEfectivo'] = $totales->totalEfectivo;
-            $data['tTarjeta']  = $totales->totalTarjeta;
-        }
-
-        $corte->update($data);
+        $corte = $caja->actualizarCorte($corte, $request->validated());
 
         return new CorteResource($corte->load('pagos.persona'));
     }
 
-    public function destroy(Corte $corte)
+    public function destroy(Corte $corte, CajaService $caja)
     {
-        $corte->update(['estado' => false]);
+        $caja->desactivarCorte($corte);
 
         return response()->json(null, 204);
     }

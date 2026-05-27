@@ -37,11 +37,15 @@ class PersonaController extends Controller
 
     public function show(Persona $persona)
     {
+        $this->asegurarActiva($persona);
+
         return new PersonaResource($persona->load('citas', 'pagos'));
     }
 
     public function update(UpdatePersonaRequest $request, Persona $persona)
     {
+        $this->asegurarActiva($persona);
+
         $persona->update($request->validated());
 
         return new PersonaResource($persona);
@@ -49,8 +53,15 @@ class PersonaController extends Controller
 
     public function destroy(Persona $persona)
     {
+        $this->asegurarActiva($persona);
+
         $persona->update(['estado' => false]);
 
         return response()->json(null, 204);
+    }
+
+    private function asegurarActiva(Persona $persona): void
+    {
+        abort_unless($persona->estado, 404);
     }
 }

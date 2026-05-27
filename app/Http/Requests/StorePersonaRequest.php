@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePersonaRequest extends FormRequest
 {
@@ -18,7 +19,12 @@ class StorePersonaRequest extends FormRequest
             'apellidoP'         => 'required|string|max:100',
             'apellidoM'         => 'nullable|string|max:100',
             'celular'           => 'required|string|max:20',
-            'correoElectronico' => 'nullable|email|max:150',
+            'correoElectronico' => [
+                'nullable',
+                'email',
+                'max:150',
+                Rule::unique('personas', 'correoElectronico'),
+            ],
             'fechaRegistro'     => 'nullable|date',
         ];
     }

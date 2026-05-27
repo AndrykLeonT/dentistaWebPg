@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\CajaService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePagoRequest extends FormRequest
@@ -15,10 +16,28 @@ class StorePagoRequest extends FormRequest
     {
         return [
             'idPersona' => 'required|integer|exists:personas,idPersona',
-            'total'     => 'required|numeric|min:0',
+            'total'     => 'required|numeric|min:0.01',
             'efectivo'  => 'required|numeric|min:0',
             'tarjeta'   => 'required|numeric|min:0',
+            'idEmpleado' => 'prohibited',
+            'idCorte'    => 'prohibited',
+            'pagado'     => 'prohibited',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $caja = app(CajaService::class);
+
+        $validator->after(function ($validator) use ($caja) {
+            if ($validator->errors()->hasAny(['total', 'efectivo', 'tarjeta'])) {
+                return;
+            }
+
+            if (! $caja->pagoEstaLiquidado($this->total, $this->efectivo, $this->tarjeta)) {
+                $validator->errors()->add('total', 'El pago debe liquidarse completamente: efectivo mas tarjeta debe ser igual al total.');
+            }
+        });
     }
 
     public function messages(): array

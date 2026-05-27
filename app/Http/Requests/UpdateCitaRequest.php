@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Empleado;
+use App\Services\DisponibilidadCitaService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateCitaRequest extends FormRequest
@@ -27,13 +27,44 @@ class UpdateCitaRequest extends FormRequest
 
     public function withValidator($validator): void
     {
-        $validator->after(function ($validator) {
-            if ($this->filled('idEmpleado')) {
-                $empleado = Empleado::with('tipoEmpleado')->find($this->idEmpleado);
+        $disponibilidad = app(DisponibilidadCitaService::class);
 
-                if (! $empleado || ! $empleado->estado || strtolower($empleado->tipoEmpleado?->nombre ?? '') !== 'dentista') {
-                    $validator->errors()->add('idEmpleado', 'El dentista seleccionado no es valido.');
-                }
+        $validator->after(function ($validator) use ($disponibilidad) {
+            $cita = $this->route('cita');
+
+            if (! $cita || ! $this->hasAny(['idEmpleado', 'fechaProgramada', 'hora', 'idServicio'])) {
+                return;
+            }
+
+            $idEmpleado = $this->input('idEmpleado', $cita->idEmpleado);
+            $fechaProgramada = $this->input('fechaProgramada', $cita->fechaProgramada?->format('Y-m-d'));
+            $hora = $this->input('hora', $cita->hora);
+            $idServicio = $this->input('idServicio', $cita->idServicio);
+
+            if (! $idEmpleado) {
+                $validator->errors()->add('idEmpleado', 'Debe asignar un dentista para modificar la agenda de la cita.');
+
+                return;
+            }
+
+            if ($validator->errors()->hasAny(['idEmpleado', 'fechaProgramada', 'hora', 'idServicio'])) {
+                return;
+            }
+
+            if (! $disponibilidad->esDentistaActivo((int) $idEmpleado)) {
+                $validator->errors()->add('idEmpleado', 'El dentista seleccionado no es valido.');
+
+                return;
+            }
+
+            if ($disponibilidad->tieneTraslape(
+                (int) $idEmpleado,
+                $fechaProgramada,
+                $hora,
+                (int) $idServicio,
+                (int) $cita->idCita
+            )) {
+                $validator->errors()->add('hora', 'El dentista ya tiene una cita que se traslapa con este horario.');
             }
         });
     }

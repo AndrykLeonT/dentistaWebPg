@@ -9,13 +9,17 @@ class PagoResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $totalCentavos = (int) round((float) $this->total * 100);
+        $cubiertoCentavos = (int) round(((float) $this->efectivo + (float) $this->tarjeta) * 100);
+        $pendienteCentavos = $totalCentavos - $cubiertoCentavos;
+
         return [
             'id'             => $this->idPago,
             'total'          => $this->total,
             'efectivo'       => $this->efectivo,
             'tarjeta'        => $this->tarjeta,
-            'pendiente'      => (float) $this->total - ((float) $this->efectivo + (float) $this->tarjeta),
-            'pagado'         => $this->pagado,
+            'pendiente'      => $pendienteCentavos / 100,
+            'pagado'         => $totalCentavos > 0 && $pendienteCentavos === 0,
             'fechaRegistro'  => $this->fechaRegistro,
             'paciente'       => $this->whenLoaded('persona', fn () => [
                 'id'             => $this->persona->idPersona,

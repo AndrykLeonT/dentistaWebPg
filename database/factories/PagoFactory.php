@@ -11,15 +11,19 @@ class PagoFactory extends Factory
 {
     public function definition(): array
     {
+        $totalCentavos = fake()->numberBetween(50000, 800000);
+        $efectivoCentavos = fake()->numberBetween(0, $totalCentavos);
+        $tarjetaCentavos = $totalCentavos - $efectivoCentavos;
+
         return [
             'idPersona' => \App\Models\Persona::factory(),
             'idEmpleado' => \App\Models\Empleado::factory(),
             'idCorte' => \App\Models\Corte::factory(),
             'fechaRegistro' => fake()->date(),
-            'total' => fake()->randomFloat(2, 500, 8000),
-            'pagado' => fake()->boolean(80), // 80% de probabilidad de que ya esté pagado
-            'efectivo' => fake()->randomFloat(2, 0, 4000),
-            'tarjeta' => fake()->randomFloat(2, 0, 4000),
+            'total' => number_format($totalCentavos / 100, 2, '.', ''),
+            'pagado' => true,
+            'efectivo' => number_format($efectivoCentavos / 100, 2, '.', ''),
+            'tarjeta' => number_format($tarjetaCentavos / 100, 2, '.', ''),
             'estado' => 1,
         ];
     }

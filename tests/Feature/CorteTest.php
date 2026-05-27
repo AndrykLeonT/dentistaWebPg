@@ -48,51 +48,113 @@ class CorteTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_cerrar_corte_calcula_totales_de_pagos(): void
+    public function test_cerrar_corte_calcula_totales_de_pagos_activos(): void
     {
-        $corte   = Corte::factory()->abierto()->create();
+        $corte = Corte::factory()->abierto()->create();
         $persona = Persona::factory()->create();
-        $admin   = $this->crearAdmin();
+        $admin = $this->crearAdmin();
 
-        Pago::factory()->create([
-            'idCorte'   => $corte->idCorte,
-            'idPersona' => $persona->idPersona,
-            'idEmpleado'=> $admin->idEmpleado,
-            'efectivo'  => 200.00,
-            'tarjeta'   => 300.00,
-            'estado'    => true,
-        ]);
-        Pago::factory()->create([
-            'idCorte'   => $corte->idCorte,
-            'idPersona' => $persona->idPersona,
-            'idEmpleado'=> $admin->idEmpleado,
-            'efectivo'  => 100.00,
-            'tarjeta'   => 150.00,
-            'estado'    => true,
-        ]);
+        foreach ([
+            ['total' => 300.00, 'efectivo' => 300.00, 'tarjeta' => 0.00],
+            ['total' => 200.00, 'efectivo' => 0.00, 'tarjeta' => 200.00],
+            ['total' => 150.00, 'efectivo' => 100.00, 'tarjeta' => 50.00],
+        ] as $montos) {
+            Pago::factory()->create($montos + [
+                'idCorte' => $corte->idCorte,
+                'idPersona' => $persona->idPersona,
+                'idEmpleado' => $admin->idEmpleado,
+                'pagado' => true,
+                'estado' => true,
+            ]);
+        }
 
-        $response = $this->actingAs($admin, 'sanctum')
+        $this->actingAs($admin, 'sanctum')
             ->putJson("/api/cortes/{$corte->idCorte}", [
                 'fechaFin' => now()->toDateTimeString(),
-            ]);
-
-        $response->assertOk()
-            ->assertJsonPath('data.tEfectivo', '300.00')
-            ->assertJsonPath('data.tTarjeta', '450.00');
+            ])->assertOk()
+            ->assertJsonPath('data.tEfectivo', '400.00')
+            ->assertJsonPath('data.tTarjeta', '250.00');
     }
 
     public function test_cerrar_corte_con_cero_pagos_guarda_totales_en_cero(): void
     {
         $corte = Corte::factory()->abierto()->create();
 
-        $response = $this->actingAs($this->crearAdmin(), 'sanctum')
+        $this->actingAs($this->crearAdmin(), 'sanctum')
             ->putJson("/api/cortes/{$corte->idCorte}", [
                 'fechaFin' => now()->toDateTimeString(),
-            ]);
-
-        $response->assertOk()
+            ])->assertOk()
             ->assertJsonPath('data.tEfectivo', '0.00')
             ->assertJsonPath('data.tTarjeta', '0.00');
+    }
+
+    public function test_no_se_puede_cerrar_corte_con_fecha_anterior_al_inicio(): void
+    {
+        $corte = Corte::factory()->abierto()->create(['fechaInicio' => now()]);
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->putJson("/api/cortes/{$corte->idCorte}", [
+                'fechaFin' => now()->subDay()->toDateTimeString(),
+            ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['fechaFin']);
+
+        $this->assertNull($corte->fresh()->fechaFin);
+    }
+
+    public function test_cierre_rechaza_totales_manual_del_frontend(): void
+    {
+        $corte = Corte::factory()->abierto()->create();
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->putJson("/api/cortes/{$corte->idCorte}", [
+                'fechaFin' => now()->toDateTimeString(),
+                'tEfectivo' => 999.00,
+                'tTarjeta' => 999.00,
+            ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['tEfectivo', 'tTarjeta']);
+
+        $this->assertNull($corte->fresh()->fechaFin);
+    }
+
+    public function test_no_se_puede_cerrar_dos_veces_un_corte(): void
+    {
+        $corte = Corte::factory()->abierto()->create();
+        $admin = $this->crearAdmin();
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/cortes/{$corte->idCorte}", ['fechaFin' => now()->toDateTimeString()])
+            ->assertOk();
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/cortes/{$corte->idCorte}", ['fechaFin' => now()->addHour()->toDateTimeString()])
+            ->assertUnprocessable();
+    }
+
+    public function test_no_se_puede_modificar_corte_cerrado(): void
+    {
+        $corte = Corte::factory()->create([
+            'fechaFin' => now(),
+            'tEfectivo' => 400.00,
+            'tTarjeta' => 250.00,
+        ]);
+
+        $this->actingAs($this->crearAdmin(), 'sanctum')
+            ->putJson("/api/cortes/{$corte->idCorte}", ['fDeCaja' => 800.00])
+            ->assertUnprocessable();
+
+        $this->assertSame('400.00', $corte->fresh()->tEfectivo);
+        $this->assertSame('250.00', $corte->fresh()->tTarjeta);
+    }
+
+    public function test_no_se_puede_desactivar_corte_cerrado(): void
+    {
+        $corte = Corte::factory()->create(['fechaFin' => now()]);
+
+        $this->actingAs($this->crearRecepcionista(), 'sanctum')
+            ->deleteJson("/api/cortes/{$corte->idCorte}")
+            ->assertUnprocessable();
+
+        $this->assertTrue($corte->fresh()->estado);
     }
 
     public function test_dentista_no_puede_acceder_a_cortes(): void

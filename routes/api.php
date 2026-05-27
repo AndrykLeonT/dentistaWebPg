@@ -3,10 +3,13 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\ClaseServicioController;
+use App\Http\Controllers\ComprobanteController;
 use App\Http\Controllers\CorteController;
 use App\Http\Controllers\EmpleadoController;
+use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\ProductoInventarioController;
 use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\TipoEmpleadoController;
@@ -45,6 +48,12 @@ Route::middleware(['auth:sanctum', 'empleado.activo'])->group(function () {
         Route::apiResource('servicios', ServicioController::class)->only(['store', 'update', 'destroy']);
         Route::apiResource('citas',     CitaController::class)->only(['store', 'update', 'destroy']);
         Route::apiResource('pagos',     PagoController::class)->only(['index', 'show', 'store', 'destroy']);
+        Route::apiResource('comprobantes', ComprobanteController::class)->only(['index', 'store', 'show', 'destroy']);
+        Route::apiResource('inventario/productos', ProductoInventarioController::class)
+            ->parameters(['productos' => 'producto'])
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
+        Route::apiResource('inventario/movimientos', MovimientoInventarioController::class)
+            ->only(['index', 'store']);
         // Ruta estática antes del apiResource para evitar que Laravel trate "activo" como {corte}
         Route::get('cortes/activo', [CorteController::class, 'activo']);
         Route::apiResource('cortes',    CorteController::class);
